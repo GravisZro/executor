@@ -1,3 +1,8 @@
+// PDTK
+#include <cxxutils/posix_helpers.h>
+#include <cxxutils/misc_helpers.h>
+#include <cxxutils/hashing.h>
+
 // C
 #include <stdint.h>
 #include <stdlib.h>
@@ -13,92 +18,7 @@
 #include <sys/resource.h>
 
 
-bool canRead(int timeout) noexcept
-{
-  pollfd pset = { STDIN_FILENO, POLLIN, 0 };
-  return ::poll(&pset, 1, timeout) > 0; // instant timeout
-}
-
-struct typeinfo_t
-{
-  uint16_t bytewidth;
-  uint16_t count;
-};
-static_assert(sizeof(typeinfo_t) == 4, "bad compiler");
-
-static typeinfo_t typeinfo;
-
-template<typename T>
-static bool readtype(T& data)
-{
-  return canRead(0) &&
-      ::read(STDIN_FILENO, &typeinfo, sizeof(typeinfo_t)) == sizeof(typeinfo_t) &&
-      sizeof(T) == typeinfo.bytewidth * typeinfo.count &&
-      ::read(STDIN_FILENO, &data, sizeof(T)) == sizeof(T);
-}
-
-template<>
-bool readtype(char*& data)
-{
-  if(!canRead(0))
-    return false;
-
-  if(data != nullptr)
-  {
-    ::free(data);
-    //delete[] data;
-    data = nullptr;
-  }
-
-  if(::read(STDIN_FILENO, &typeinfo, sizeof(typeinfo_t)) != sizeof(typeinfo_t) || typeinfo.bytewidth != sizeof(char))
-    return false;
-  data = reinterpret_cast<char*>(::malloc(typeinfo.count+1));
-      //new char[typeinfo.count+1];
-  if(data == nullptr)
-    return false;
-  ::memset(data, 0, typeinfo.count+1);
-  return ::read(STDIN_FILENO, data, typeinfo.count) == typeinfo.count;
-}
-
-template<typename T>
-static bool writetype(const T& data)
-{
-  struct return_t
-  {
-    typeinfo_t typeinfo;
-    T rcode;
-  } wrapped_data = { { sizeof(T), 1 }, data };
-
-  return sizeof(return_t) == ::write(STDOUT_FILENO, &wrapped_data, sizeof(return_t));
-}
-
-namespace posix
-{
-  const int success_response = 0;
-  const int error_response = -1;
-}
-
-static inline int get_errno(int value)
-{ return value == posix::success_response ? posix::success_response : errno; }
-
-enum class command : uint8_t
-{
-  invalid = 0xFF,
-  invoke = 0,
-  executable,
-  arguments,
-  environment,
-  environmentvar,
-  workingdir,
-  priority,
-  uid,
-  gid,
-  euid,
-  egid,
-  resource
-};
-
-
+typedef uint32_t malterminator; // ensure malformed multibyte strings are terminated
 
 int main(int argc, char *argv[])
 {
@@ -106,158 +26,97 @@ int main(int argc, char *argv[])
   char* workingdir = nullptr;
   char* arguments[0x100] = { nullptr };
 
-  command cmd = command::invalid;
-
-  while(canRead(1000)) // timeout after 1 second
+  struct entry_t
   {
-    readtype(cmd);
-    switch(cmd)
+    uint16_t bytewidth;
+    uint16_t count;
+    const char* data;
+
+    constexpr posix::size_t   size(void) const { return bytewidth * count; }
+    constexpr posix::ssize_t ssize(void) const { return bytewidth * count; }
+  };
+
+  entry_t entry_data[0x0020000] = { { 0, 0, nullptr } }; // 128K possible entries
+  entry_t* entry_pos = entry_data;
+  entry_t* entry_end = entry_data + arraylength(entry_data);
+
+  char string_data[0x00400000] = { 0 }; // 4MiB string data buffer
+  char* string_pos = string_data;
+  char* string_end = string_data + arraylength(string_data);
+
+  pollfd pset = { STDIN_FILENO, POLLIN, 0 };
+  bool ok = true;
+  bool done = false;
+  bool iskey = true;
+
+  while(ok && !done)
+  {
+    if(ok)
+      ok &= ::poll(&pset, 1, 1000) > 0;
+    if(ok)
+      ok &= ::read(STDIN_FILENO, &entry_pos->bytewidth, sizeof(uint16_t)) == sizeof(uint16_t); // reading entry type bytewidth worked
+    if(ok)
+      ok &= ::read(STDIN_FILENO, &entry_pos->count, sizeof(uint16_t)) == sizeof(uint16_t); // reading entry type count worked
+    if(ok)
     {
-      case command::invoke: // invoke the executable with the previous specified commands
-      {
-        if(exefile == nullptr) // assume the first argument is the executable name
-          exefile = arguments[0];
+      entry_pos->data = string_pos;
+      ok &= ::read(STDIN_FILENO, string_pos, entry_pos->size()) == entry_pos->ssize();
+    }
 
-        ::execv(exefile, arguments);
-        ::exit(errno);
-      }
-
-      case command::executable: // specify executable name explicitly
+    if(ok)
+    {
+      if(iskey) // if even numbered string then it's a key
       {
-        struct stat statbuf;
-        readtype(exefile);
-        if(::stat(exefile, &statbuf) == posix::error_response)
-          writetype<int>(errno);
-        else if(statbuf.st_mode ^ S_IFREG)
-          writetype<int>(EACCES);
-        else if(statbuf.st_mode ^ S_IEXEC)
-          writetype<int>(EACCES);
+        if(entry_pos->bytewidth == 1 && // if the key is a series of characters AND
+           entry_pos->count == 6 && // it's six characters long AND
+           string_pos[0] == 'L' && // is "Launch"
+           string_pos[1] == 'a' &&
+           string_pos[2] == 'u' &&
+           string_pos[3] == 'n' &&
+           string_pos[4] == 'c' &&
+           string_pos[5] == 'h')
+          done = true; // we are done!
         else
-          writetype<int>(posix::success_response);
-        break;
+          ok &= string_pos[0] == '/'; // otherwise the key must begin with an absolute path
       }
+      iskey ^= true;
+    }
 
-      case command::arguments: // specify arguments
-      {
-        // destroy old argument list (if it exists)
-        for(uint16_t i = 0; arguments[i] != nullptr && i < 0x0100; ++i)
-          ::free(arguments[i]);
-          //delete[] arguments[i];
-        ::memset(arguments, 0, sizeof(arguments));
+    if(ok)
+    {
+      string_pos += entry_pos->size() + sizeof(malterminator); // add four 0 chars to eliminate malformed multibyte strings from overflowing
+      ++entry_pos; // move to next entry
 
-        // read new argument list into buffer
-        for(uint16_t i = 0; readtype(arguments[i]) && i < 0x100; ++i);
-
-        writetype<int>(arguments[0] == nullptr ? posix::error_response : posix::success_response);
-        break;
-      }
-
-      case command::environment: // specify one or more environment variables
-      case command::environmentvar: // specify one environment variable
-      {
-        int rval = posix::success_response;
-        char *key, *value;
-        key = nullptr;
-        value = nullptr;
-        while(readtype(key  ) &&
-              readtype(value) &&
-              rval == posix::success_response)
-          rval = ::setenv(key, value, 1);
-
-        ::free(key);
-        ::free(value);
-        //delete[] key;
-        //delete[] value;
-        writetype<int>(get_errno(rval));
-        break;
-      }
-
-      case command::workingdir: // specify the working directory
-      {
-        ::fprintf(stderr, "workingdir\n");
-        struct stat statbuf;
-        readtype(workingdir);
-
-        if(::stat(workingdir, &statbuf) == posix::error_response)
-          writetype<int>(errno);
-        else if(statbuf.st_mode ^ S_IFDIR)
-          writetype<int>(EACCES);
-        else if(statbuf.st_mode ^ S_IEXEC)
-          writetype<int>(EACCES);
-        else
-          writetype<int>(posix::success_response);
-        break;
-      }
-
-      case command::priority: // specify process priority
-      {
-        int priority;
-        readtype(priority);
-        writetype<int>(get_errno(::setpriority(PRIO_PROCESS, getpid(), priority))); // set priority
-        break;
-      }
-
-      case command::uid: // specify process user id number
-      {
-        uid_t uid;
-        readtype(uid);
-        writetype<int>(get_errno(::setuid(uid)));
-        break;
-      }
-
-      case command::gid: // specify process group id number
-      {
-        gid_t gid;
-        readtype(gid);
-        writetype<int>(get_errno(::setgid(gid)));
-        break;
-      }
-
-      case command::euid: // specify process effective user id number
-      {
-        uid_t euid;
-        readtype(euid);
-        writetype<int>(get_errno(::seteuid(euid)));
-        break;
-      }
-
-      case command::egid: // specify process effective group id number
-      {
-        gid_t egid;
-        readtype(egid);
-        writetype<int>(get_errno(::setegid(egid)));
-        break;
-      }
-
-      case command::resource: // specify a limit
-      {
-        int limit_id;
-        rlimit val;
-        readtype(limit_id);
-        readtype(val.rlim_cur);
-        readtype(val.rlim_max);
-        writetype<int>(get_errno(::setrlimit(limit_id, &val)));
-        break;
-      }
-
-      default: // bad request code
-        writetype<int>(EBADRQC);
-        break;
+      ok &= string_pos < string_end && // ensure we're still within the data buffer
+            entry_pos < entry_end;
     }
   }
 
-  if(exefile != nullptr)
-    ::free(exefile);
-    //delete[] exefile;
 
-  if(workingdir != nullptr)
-    ::free(exefile);
-    //delete[] workingdir;
+/*
+  if(::setenv(key, value, 1) == posix::error_response)
+    return EXIT_FAILURE;
 
-  for(uint16_t i = 0; arguments[i] != nullptr && i < 0x0100; ++i)
-    ::free(arguments[i]);
-    //delete[] arguments[i];
+  if(::setpriority(PRIO_PROCESS, getpid(), priority) == posix::error_response) // set priority
+    return EXIT_FAILURE;
 
-  ::fprintf(stderr, "exiting\n");
-  return errno;
+  if(::setuid(uid) == posix::error_response)
+    return EXIT_FAILURE;
+
+  if(::setgid(gid) == posix::error_response)
+    return EXIT_FAILURE;
+
+  if(::seteuid(euid) == posix::error_response)
+    return EXIT_FAILURE;
+
+  if(::setegid(egid) == posix::error_response)
+    return EXIT_FAILURE;
+
+  if(::setrlimit(limit_id, &val) == posix::error_response)
+    return EXIT_FAILURE;
+
+  if(exefile == nullptr) // assume the first argument is the executable name
+    exefile = arguments[0];
+*/
+  return ::execv(exefile, arguments);
 }
