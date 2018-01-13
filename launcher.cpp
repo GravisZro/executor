@@ -20,21 +20,21 @@
 
 typedef uint32_t malterminator; // ensure malformed multibyte strings are terminated
 
+struct entry_t
+{
+  uint16_t bytewidth;
+  uint16_t count;
+  const char* data;
+
+  constexpr posix::size_t   size(void) const { return bytewidth * count; }
+  constexpr posix::ssize_t ssize(void) const { return bytewidth * count; }
+};
+
 int main(int argc, char *argv[])
 {
-  char* exefile = nullptr;
-  char* workingdir = nullptr;
-  char* arguments[0x100] = { nullptr };
-
-  struct entry_t
-  {
-    uint16_t bytewidth;
-    uint16_t count;
-    const char* data;
-
-    constexpr posix::size_t   size(void) const { return bytewidth * count; }
-    constexpr posix::ssize_t ssize(void) const { return bytewidth * count; }
-  };
+  entry_t* exefile = nullptr;
+  entry_t* workingdir = nullptr;
+  entry_t* arguments[0x100] = { nullptr };
 
   entry_t entry_data[0x0020000] = { { 0, 0, nullptr } }; // 128K possible entries
   entry_t* entry_pos = entry_data;
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     {
       if(iskey) // if even numbered string then it's a key
       {
-        if(entry_pos->bytewidth == 1 && // if the key is a series of characters AND
+        if(entry_pos->bytewidth == 1 && // key is a narrow character string AND
            entry_pos->count == 6 && // it's six characters long AND
            string_pos[0] == 'L' && // is "Launch"
            string_pos[1] == 'a' &&
@@ -77,7 +77,8 @@ int main(int argc, char *argv[])
            string_pos[5] == 'h')
           done = true; // we are done!
         else
-          ok &= string_pos[0] == '/'; // otherwise the key must begin with an absolute path
+          ok &= entry_pos->bytewidth == 1 && // key is a narrow character string
+                string_pos[0] == '/'; // key must begin with an absolute path
       }
       iskey ^= true;
     }
@@ -92,6 +93,8 @@ int main(int argc, char *argv[])
     }
   }
 
+  if(!ok || !done)
+    return EXIT_FAILURE;
 
 /*
   if(::setenv(key, value, 1) == posix::error_response)
