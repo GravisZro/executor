@@ -33,8 +33,8 @@ INCLUDEPATH += $$PDTK
 SOURCES = launcher.cpp 
 
 HEADERS +=  \
-    $$PDTK/cxxutils/vfifo.h \
     $$PDTK/cxxutils/posix_helpers.h \
+    $$PDTK/cxxutils/misc_helpers.h \
     $$PDTK/cxxutils/socket_helpers.h \
     $$PDTK/cxxutils/error_helpers.h \
     $$PDTK/cxxutils/hashing.h \
