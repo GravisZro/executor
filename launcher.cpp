@@ -3,11 +3,12 @@
 #include <cxxutils/misc_helpers.h>
 #include <cxxutils/hashing.h>
 
-// C
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+// POSIX++
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+
 
 // POSIX
 #include <errno.h>
@@ -24,17 +25,47 @@ struct entry_t
 {
   uint16_t bytewidth;
   uint16_t count;
-  const char* data;
+  char* data;
 
   constexpr posix::size_t   size(void) const { return bytewidth * count; }
   constexpr posix::ssize_t ssize(void) const { return bytewidth * count; }
 };
 
+static bool starts_with(entry_t* entry, const char* str)
+{
+  return std::strcmp(entry->data, str) == 0;
+}
+
+#include <cassert>
+// modifies an entry to explode it's string into an array
+static void explode(entry_t* entry, char** array, size_t arr_length, const char delim)
+{
+  char** arg_pos = array;
+  char** arg_end = array + arr_length;
+  *arg_pos = entry->data; // store first argument;
+
+  // this is a oddly complex loop to modify the a string and fill array "arguments", look very closely
+  for(char* pos = nullptr; // pos is always set when checking the condition
+      arg_pos != arg_end &&
+      (pos = std::strchr(*arg_pos, delim)) != nullptr; // search the current string for a space
+      *(++arg_pos) = ++pos) // store start of next string part (next argument)
+  {
+    for(; *pos == ' '; ++pos) // while space character
+      *pos = 0; // terminate string
+    assert(pos < entry->data + entry->count); // this should never fail)
+  }
+}
+
 int main(int argc, char *argv[])
 {
-  entry_t* exefile = nullptr;
-  entry_t* workingdir = nullptr;
-  entry_t* arguments[0x100] = { nullptr };
+  char* arguments[0x100] = { nullptr };
+  char* executable  = nullptr;
+  char* workingdir  = nullptr;
+  char* priority    = nullptr;
+  char* user        = nullptr;
+  char* group       = nullptr;
+  char* euser       = nullptr;
+  char* egroup      = nullptr;
 
   entry_t entry_data[0x0020000] = { { 0, 0, nullptr } }; // 128K possible entries
   entry_t* entry_pos = entry_data;
@@ -85,7 +116,7 @@ int main(int argc, char *argv[])
 
     if(ok)
     {
-      string_pos += entry_pos->size() + sizeof(malterminator); // add four 0 chars to eliminate malformed multibyte strings from overflowing
+      string_pos += entry_pos->size() + sizeof(malterminator); // add four \0 (null terminator) chars to eliminate malformed multibyte strings from overflowing
       ++entry_pos; // move to next entry
 
       ok &= string_pos < string_end && // ensure we're still within the data buffer
@@ -96,30 +127,98 @@ int main(int argc, char *argv[])
   if(!ok || !done)
     return EXIT_FAILURE;
 
-/*
-  if(::setenv(key, value, 1) == posix::error_response)
+  for(entry_end = entry_pos, // save new ending location
+      entry_pos = entry_data; // return to start
+      entry_pos <= entry_end; // exit when you reach the end
+      entry_pos += 2) // move toward the end
+  {
+    entry_t* key = entry_pos;
+    entry_t* value = entry_pos + 1;
+
+    switch (hash(key->data, key->count))
+    {
+      case "/Process/Executable"_hash:
+        executable = value->data;
+      break;
+
+      case "/Process/WorkingDirectory"_hash:
+        workingdir = value->data;
+      break;
+
+      case "/Process/Arguments"_hash:
+        explode(value, arguments, arraylength(arguments), ' ');
+      break;
+
+      case "/Process/Priority"_hash:
+        priority = value->data;
+        break;
+
+      case "/Process/User"_hash:
+        user = value->data;
+        break;
+
+      case "/Process/Group"_hash:
+        group = value->data;
+        break;
+
+      case "/Process/EffectiveUser"_hash:
+        euser = value->data;
+        break;
+
+      case "/Process/EffectiveGroup"_hash:
+        egroup = value->data;
+        break;
+
+      case "/ResourceLimits/CPUTime"_hash:
+        break;
+
+      default:
+        if(starts_with(key, "/Environment/"))
+        {
+          if(::setenv(key->data + sizeof("/Environment/") - 1, value->data, 1))
+            return EXIT_FAILURE;
+        }
+
+
+      break;
+    }
+  }
+
+  if(priority != nullptr &&
+     ::setpriority(PRIO_PROCESS, id_t(getpid()), std::atoi(priority)) == posix::error_response) // set priority
     return EXIT_FAILURE;
 
-  if(::setpriority(PRIO_PROCESS, getpid(), priority) == posix::error_response) // set priority
+  if(user != nullptr &&
+     (posix::getuserid(user) == gid_t(posix::error_response) ||
+      ::setuid(posix::getuserid(user)) == posix::error_response))
     return EXIT_FAILURE;
 
-  if(::setuid(uid) == posix::error_response)
+  if(group != nullptr &&
+     (posix::getgroupid(group) == uid_t(posix::error_response) ||
+      ::setgid(posix::getgroupid(group)) == posix::error_response))
     return EXIT_FAILURE;
 
-  if(::setgid(gid) == posix::error_response)
+  if(euser != nullptr &&
+     (posix::getuserid(euser) == gid_t(posix::error_response) ||
+      ::seteuid(posix::getuserid(euser)) == posix::error_response))
     return EXIT_FAILURE;
 
-  if(::seteuid(euid) == posix::error_response)
+  if(egroup != nullptr &&
+     (posix::getgroupid(egroup) == uid_t(posix::error_response) ||
+      ::setegid(posix::getgroupid(egroup)) == posix::error_response))
     return EXIT_FAILURE;
 
-  if(::setegid(egid) == posix::error_response)
+//  if(::setrlimit(limit_id, &val) == posix::error_response)
+//    return EXIT_FAILURE;
+
+
+
+
+  if(arguments[0] == nullptr)
     return EXIT_FAILURE;
 
-  if(::setrlimit(limit_id, &val) == posix::error_response)
-    return EXIT_FAILURE;
+  if(executable == nullptr) // assume the first argument is the executable name
+    executable = arguments[0];
 
-  if(exefile == nullptr) // assume the first argument is the executable name
-    exefile = arguments[0];
-*/
-  return ::execv(exefile, arguments);
+  return ::execv(executable, const_cast<char* const*>(arguments));
 }
