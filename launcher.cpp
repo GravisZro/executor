@@ -8,7 +8,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
-
+#include <cctype>
 
 // POSIX
 #include <errno.h>
@@ -36,25 +36,59 @@ static bool starts_with(entry_t* entry, const char* str)
   return std::strcmp(entry->data, str) == 0;
 }
 
-#include <cassert>
-// modifies an entry to explode it's string into an array
-static void explode(entry_t* entry, char** array, size_t arr_length, const char delim)
+
+static void strtoargs(entry_t* entry, char** array, size_t arr_length)
 {
   char** arg_pos = array;
   char** arg_end = array + arr_length;
   *arg_pos = entry->data; // store first argument;
 
-  // this is a oddly complex loop to modify the a string and fill array "arguments", look very closely
-  for(char* pos = nullptr; // pos is always set when checking the condition
-      arg_pos != arg_end &&
-      (pos = std::strchr(*arg_pos, delim)) != nullptr; // search the current string for a space
-      *(++arg_pos) = ++pos) // store start of next string part (next argument)
+  bool quote_open = false;
+  for(size_t pos = 0; pos < entry->count && arg_pos != arg_end; ++pos)
   {
-    for(; *pos == ' '; ++pos) // while space character
-      *pos = 0; // terminate string
-    assert(pos < entry->data + entry->count); // this should never fail)
+    if(::isspace(entry->data[pos]))
+    {
+      if(!quote_open)
+      {
+        entry->data[pos] = 0;
+        ++arg_pos;
+        if(arg_pos != arg_end)
+          *arg_pos = &entry->data[pos + 1];
+      }
+    }
+    else if(entry->data[pos] == '\\' &&
+            pos + 1 < entry->count)
+    {
+      switch(entry->data[pos + 1])
+      {
+        case 't' : entry->data[pos] = '\t'; break;
+        case 'n' : entry->data[pos] = '\n'; break;
+        case 'v' : entry->data[pos] = '\v'; break;
+        case 'f' : entry->data[pos] = '\f'; break;
+        case 'r' : entry->data[pos] = '\r'; break;
+        case '"' : entry->data[pos] = '"' ; break;
+        case ' ' : entry->data[pos] = ' ' ; break;
+        case '\\': entry->data[pos] = '\\'; break;
+        default:
+          continue; // skip resizing!
+      }
+      for(size_t mpos = pos + 2; mpos < entry->count; ++mpos) // shift the rest of the string one char
+        entry->data[mpos - 1] = entry->data[mpos];
+      --entry->count; // reduce size of string
+      entry->data[entry->count] = 0; // terminate properly
+    }
+    else if(entry->data[pos] == '"')
+    {
+      quote_open ^= true; // toggle
+
+      for(size_t mpos = pos + 1; mpos < entry->count; ++mpos) // shift the rest of the string one char
+        entry->data[mpos - 1] = entry->data[mpos];
+      --entry->count; // reduce size of string
+      entry->data[entry->count] = 0; // terminate properly
+    }
   }
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -67,6 +101,8 @@ int main(int argc, char *argv[])
   char* euser       = nullptr;
   char* egroup      = nullptr;
 
+
+
   entry_t entry_data[0x0020000] = { { 0, 0, nullptr } }; // 128K possible entries
   entry_t* entry_pos = entry_data;
   entry_t* entry_end = entry_data + arraylength(entry_data);
@@ -74,6 +110,32 @@ int main(int argc, char *argv[])
   char string_data[0x00400000] = { 0 }; // 4MiB string data buffer
   char* string_pos = string_data;
   char* string_end = string_data + arraylength(string_data);
+
+#if 0
+  int iopipe[2] = { STDIN_FILENO, STDOUT_FILENO };
+
+  if(pipe(iopipe) == -1)
+  {
+    printf("error: %s\n", strerror(errno));
+    fflush(stdout);
+    return EXIT_FAILURE;
+  }
+  char input_data[] =
+  {
+    1, 0,
+    sizeof("/Process/Arguments") - 1, 0,
+    '/', 'P', 'r', 'o', 'c', 'e', 's', 's', '/', 'A', 'r', 'g', 'u', 'm', 'e', 'n', 't', 's',
+
+    1, 0,
+    sizeof("/bin/sh -c \"echo Hello World\"") - 1, 0,
+    '/', 'b', 'i', 'n', '/', 's', 'h', ' ', '-', 'c', ' ', '\"', 'e', 'c', 'h', 'o', ' ', 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '\"',
+
+    1, 0,
+    sizeof("Launch") - 1, 0,
+    'L', 'a', 'u', 'n', 'c', 'h',
+  };
+  ::write(iopipe[1], input_data, sizeof(input_data));
+#endif
 
   pollfd pset = { STDIN_FILENO, POLLIN, 0 };
   bool ok = true;
@@ -127,7 +189,7 @@ int main(int argc, char *argv[])
   if(!ok || !done)
     return EXIT_FAILURE;
 
-  for(entry_end = entry_pos, // save new ending location
+  for(entry_end = entry_pos - 1, // save new ending location (minus the "Launch" entry)
       entry_pos = entry_data; // return to start
       entry_pos <= entry_end; // exit when you reach the end
       entry_pos += 2) // move toward the end
@@ -135,7 +197,7 @@ int main(int argc, char *argv[])
     entry_t* key = entry_pos;
     entry_t* value = entry_pos + 1;
 
-    switch (hash(key->data, key->count))
+    switch(hash(key->data, key->count)) // exclude null terminator from count
     {
       case "/Process/Executable"_hash:
         executable = value->data;
@@ -146,7 +208,16 @@ int main(int argc, char *argv[])
       break;
 
       case "/Process/Arguments"_hash:
-        explode(value, arguments, arraylength(arguments), ' ');
+      {
+        printf("converting : %s\n", value->data);
+        strtoargs(value, arguments, arraylength(arguments));
+        for(char** pos = arguments; *pos; ++pos)
+        {
+          printf("arg : \"%s\"\n", *pos);
+        }
+        printf("done\n");
+        fflush(stdout);
+      }
       break;
 
       case "/Process/Priority"_hash:
