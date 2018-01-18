@@ -90,6 +90,8 @@ static void strtoargs(entry_t* entry, char** array, size_t arr_length)
 }
 
 
+//#define DEBUGABLE_TEST
+
 int main(int argc, char *argv[])
 {
   char* arguments[0x100] = { nullptr };
@@ -101,8 +103,6 @@ int main(int argc, char *argv[])
   char* euser       = nullptr;
   char* egroup      = nullptr;
 
-
-
   entry_t entry_data[0x0020000] = { { 0, 0, nullptr } }; // 128K possible entries
   entry_t* entry_pos = entry_data;
   entry_t* entry_end = entry_data + arraylength(entry_data);
@@ -111,8 +111,11 @@ int main(int argc, char *argv[])
   char* string_pos = string_data;
   char* string_end = string_data + arraylength(string_data);
 
-#if 0
-  int iopipe[2] = { STDIN_FILENO, STDOUT_FILENO };
+#ifdef DEBUGABLE_TEST
+#undef STDIN_FILENO
+#define STDIN_FILENO  iopipe[0]
+
+  int iopipe[2] = { 0 };
 
   if(pipe(iopipe) == -1)
   {
@@ -283,8 +286,6 @@ int main(int argc, char *argv[])
 //    return EXIT_FAILURE;
 
 
-
-
   if(arguments[0] == nullptr)
     return EXIT_FAILURE;
 
@@ -293,3 +294,8 @@ int main(int argc, char *argv[])
 
   return ::execv(executable, const_cast<char* const*>(arguments));
 }
+
+#ifdef DEBUGABLE_TEST
+#undef STDIN_FILENO
+#define STDIN_FILENO  0
+#endif
