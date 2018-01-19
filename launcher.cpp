@@ -33,7 +33,7 @@ struct entry_t
 
 static bool starts_with(entry_t* entry, const char* str)
 {
-  return std::strcmp(entry->data, str) == 0;
+  return std::memcmp(entry->data, str, strlen(str)) == 0;
 }
 
 
