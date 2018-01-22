@@ -294,37 +294,37 @@ int main(int argc, char *argv[])
   if(limit_core != nullptr && // value is set
      (std::atoi(limit_core) || limit_core[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_CORE, &(lim = { 0, rlim_t(std::atoi(limit_core)) })) == posix::error_response) // ensure limit was set
-     return EXIT_FAILURE;
+    return EXIT_FAILURE;
 
   if(limit_cpu != nullptr && // value is set
      (std::atoi(limit_cpu) || limit_cpu[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_CPU, &(lim = { 0, rlim_t(std::atoi(limit_cpu)) })) == posix::error_response) // ensure limit was set
-     return EXIT_FAILURE;
+    return EXIT_FAILURE;
 
   if(limit_data != nullptr && // value is set
      (std::atoi(limit_data) || limit_data[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_DATA, &(lim = { 0, rlim_t(std::atoi(limit_data)) })) == posix::error_response) // ensure limit was set
-     return EXIT_FAILURE;
+    return EXIT_FAILURE;
 
   if(limit_fsize != nullptr && // value is set
      (std::atoi(limit_fsize) || limit_fsize[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_FSIZE, &(lim = { 0, rlim_t(std::atoi(limit_fsize)) })) == posix::error_response) // ensure limit was set
-     return EXIT_FAILURE;
+    return EXIT_FAILURE;
 
   if(limit_nofile != nullptr && // value is set
      (std::atoi(limit_nofile) || limit_nofile[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_NOFILE, &(lim = { 0, rlim_t(std::atoi(limit_nofile)) })) == posix::error_response) // ensure limit was set
-     return EXIT_FAILURE;
+    return EXIT_FAILURE;
 
   if(limit_stack != nullptr && // value is set
      (std::atoi(limit_stack) || limit_stack[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_STACK, &(lim = { 0, rlim_t(std::atoi(limit_stack)) })) == posix::error_response) // ensure limit was set
-     return EXIT_FAILURE;
+    return EXIT_FAILURE;
 
   if(limit_as != nullptr && // value is set
      (std::atoi(limit_as) || limit_as[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_AS, &(lim = { 0, rlim_t(std::atoi(limit_as)) })) == posix::error_response) // ensure limit was set
-     return EXIT_FAILURE;
+    return EXIT_FAILURE;
  // </limits>
 
   if(priority != nullptr &&
