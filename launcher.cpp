@@ -95,13 +95,20 @@ static void strtoargs(entry_t* entry, char** array, size_t arr_length)
 int main(int argc, char *argv[])
 {
   char* arguments[0x100] = { nullptr };
-  char* executable  = nullptr;
-  char* workingdir  = nullptr;
-  char* priority    = nullptr;
-  char* user        = nullptr;
-  char* group       = nullptr;
-  char* euser       = nullptr;
-  char* egroup      = nullptr;
+  char* executable    = nullptr;
+  char* workingdir    = nullptr;
+  char* priority      = nullptr;
+  char* user          = nullptr;
+  char* group         = nullptr;
+  char* euser         = nullptr;
+  char* egroup        = nullptr;
+  char* limit_core    = nullptr;
+  char* limit_cpu     = nullptr;
+  char* limit_data    = nullptr;
+  char* limit_fsize   = nullptr;
+  char* limit_nofile  = nullptr;
+  char* limit_stack   = nullptr;
+  char* limit_as      = nullptr;
 
   entry_t entry_data[0x0020000] = { { 0, 0, nullptr } }; // 128K possible entries
   entry_t* entry_pos = entry_data;
@@ -243,7 +250,28 @@ int main(int argc, char *argv[])
         egroup = value->data;
         break;
 
-      case "/ResourceLimits/CPUTime"_hash:
+// LimitRSS=, LimitNPROC=, LimitMEMLOCK=, LimitLOCKS=, LimitSIGPENDING=, LimitMSGQUEUE=, LimitNICE=, LimitRTPRIO=, LimitRTTIME=
+
+      case "/Limits/CoreDumpSize"_hash: // LimitCORE
+        limit_core = value->data;
+        break;
+      case "/Limits/CPUTime"_hash: // LimitCPU
+        limit_cpu = value->data;
+        break;
+      case "/Limits/DataSegmentSize"_hash: // LimitDATA
+        limit_data = value->data;
+        break;
+      case "/Limits/FileSize"_hash: // LimitFSIZE
+        limit_fsize = value->data;
+        break;
+      case "/Limits/FilesOpen"_hash: // LimitNOFILE
+        limit_nofile = value->data;
+        break;
+      case "/Limits/StackSize"_hash: // LimitSTACK
+        limit_stack = value->data;
+        break;
+      case "/Limits/AddressSpaceSize"_hash: // LimitAS
+        limit_as = value->data;
         break;
 
       default:
@@ -258,28 +286,73 @@ int main(int argc, char *argv[])
     }
   }
 
+
+
+// <limits>
+  struct rlimit lim;
+
+  if(limit_core != nullptr && // value is set
+     (std::atoi(limit_core) || limit_core[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_CORE, &(lim = { 0, rlim_t(std::atoi(limit_core)) })) == posix::error_response) // ensure limit was set
+     return EXIT_FAILURE;
+
+  if(limit_cpu != nullptr && // value is set
+     (std::atoi(limit_cpu) || limit_cpu[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_CPU, &(lim = { 0, rlim_t(std::atoi(limit_cpu)) })) == posix::error_response) // ensure limit was set
+     return EXIT_FAILURE;
+
+  if(limit_data != nullptr && // value is set
+     (std::atoi(limit_data) || limit_data[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_DATA, &(lim = { 0, rlim_t(std::atoi(limit_data)) })) == posix::error_response) // ensure limit was set
+     return EXIT_FAILURE;
+
+  if(limit_fsize != nullptr && // value is set
+     (std::atoi(limit_fsize) || limit_fsize[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_FSIZE, &(lim = { 0, rlim_t(std::atoi(limit_fsize)) })) == posix::error_response) // ensure limit was set
+     return EXIT_FAILURE;
+
+  if(limit_nofile != nullptr && // value is set
+     (std::atoi(limit_nofile) || limit_nofile[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_NOFILE, &(lim = { 0, rlim_t(std::atoi(limit_nofile)) })) == posix::error_response) // ensure limit was set
+     return EXIT_FAILURE;
+
+  if(limit_stack != nullptr && // value is set
+     (std::atoi(limit_stack) || limit_stack[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_STACK, &(lim = { 0, rlim_t(std::atoi(limit_stack)) })) == posix::error_response) // ensure limit was set
+     return EXIT_FAILURE;
+
+  if(limit_as != nullptr && // value is set
+     (std::atoi(limit_as) || limit_as[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_AS, &(lim = { 0, rlim_t(std::atoi(limit_as)) })) == posix::error_response) // ensure limit was set
+     return EXIT_FAILURE;
+ // </limits>
+
   if(priority != nullptr &&
      ::setpriority(PRIO_PROCESS, id_t(getpid()), std::atoi(priority)) == posix::error_response) // set priority
     return EXIT_FAILURE;
 
+  if(workingdir != nullptr &&
+     ::chdir(workingdir) == posix::error_response) // set working director
+     return EXIT_FAILURE;
+
   if(user != nullptr &&
      (posix::getuserid(user) == gid_t(posix::error_response) ||
-      ::setuid(posix::getuserid(user)) == posix::error_response))
+      ::setuid(posix::getuserid(user)) == posix::error_response)) // set UID
     return EXIT_FAILURE;
 
   if(group != nullptr &&
      (posix::getgroupid(group) == uid_t(posix::error_response) ||
-      ::setgid(posix::getgroupid(group)) == posix::error_response))
+      ::setgid(posix::getgroupid(group)) == posix::error_response)) // set GID
     return EXIT_FAILURE;
 
   if(euser != nullptr &&
      (posix::getuserid(euser) == gid_t(posix::error_response) ||
-      ::seteuid(posix::getuserid(euser)) == posix::error_response))
+      ::seteuid(posix::getuserid(euser)) == posix::error_response)) // set Effective UID
     return EXIT_FAILURE;
 
   if(egroup != nullptr &&
      (posix::getgroupid(egroup) == uid_t(posix::error_response) ||
-      ::setegid(posix::getgroupid(egroup)) == posix::error_response))
+      ::setegid(posix::getgroupid(egroup)) == posix::error_response)) // set Effective GID
     return EXIT_FAILURE;
 
 //  if(::setrlimit(limit_id, &val) == posix::error_response)
@@ -291,6 +364,7 @@ int main(int argc, char *argv[])
 
   if(executable == nullptr) // assume the first argument is the executable name
     executable = arguments[0];
+
 
   return ::execv(executable, const_cast<char* const*>(arguments));
 }
