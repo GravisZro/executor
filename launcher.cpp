@@ -13,7 +13,6 @@
 // POSIX
 #include <errno.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <poll.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
@@ -354,9 +353,6 @@ int main(int argc, char *argv[])
      (posix::getgroupid(egroup) == uid_t(posix::error_response) ||
       ::setegid(posix::getgroupid(egroup)) == posix::error_response)) // set Effective GID
     return EXIT_FAILURE;
-
-//  if(::setrlimit(limit_id, &val) == posix::error_response)
-//    return EXIT_FAILURE;
 
 
   if(arguments[0] == nullptr)
