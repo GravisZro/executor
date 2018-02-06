@@ -32,8 +32,8 @@ CFLAGS        = -pipe -g -Wall -W -fPIC $(DEFINES) $(INCPATH)
 CXXFLAGS      = -pipe -std=c++14 -Os -fno-exceptions -fno-rtti -fno-threadsafe-statics -g -Wall -W -fPIC $(DEFINES) $(INCPATH)
 LDFLAGS       = 
 
-TARGET        = launcher
-SOURCES       = launcher.cpp
+TARGET        = executor
+SOURCES       = executor.cpp
 
 OBJS := $(SOURCES:.s=.o)
 OBJS := $(OBJS:.c=.o)

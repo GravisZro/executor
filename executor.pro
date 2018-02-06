@@ -8,6 +8,8 @@ CONFIG += c++14
 
 # universal arguments
 QMAKE_CXXFLAGS += -std=c++14
+QMAKE_CXXFLAGS += -fconstexpr-depth=256
+#QMAKE_CXXFLAGS += -fconstexpr-steps=900000000
 QMAKE_CXXFLAGS += -pipe -Os -fno-exceptions -fno-rtti -fno-threadsafe-statics
 #QMAKE_CXXFLAGS += -pipe -Os
 #QMAKE_CXXFLAGS += -fno-exceptions
@@ -30,7 +32,7 @@ LIBS += -lc++
 PDTK = ../pdtk
 INCLUDEPATH += $$PDTK
 
-SOURCES = launcher.cpp 
+SOURCES = executor.cpp 
 
 HEADERS +=  \
     $$PDTK/cxxutils/posix_helpers.h \
