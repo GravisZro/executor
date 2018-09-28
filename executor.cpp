@@ -125,8 +125,8 @@ int main(int argc, char *argv[])
 
   if(pipe(iopipe) == -1)
   {
-    printf("error: %s\n", strerror(errno));
-    fflush(stdout);
+    std::printf("error: %s\n", strerror(errno));
+    std::fflush(stdout);
     return EXIT_FAILURE;
   }
   char input_data[] =
@@ -218,14 +218,14 @@ int main(int argc, char *argv[])
 
       case "/Process/Arguments"_hash:
       {
-        printf("converting : %s\n", value->data);
+        std::printf("converting : %s\n", value->data);
         strtoargs(value, arguments, arraylength(arguments));
         for(char** pos = arguments; *pos; ++pos)
         {
-          printf("arg : \"%s\"\n", *pos);
+          std::printf("arg : \"%s\"\n", *pos);
         }
-        printf("done\n");
-        fflush(stdout);
+        std::printf("done\n");
+        std::fflush(stdout);
       }
       break;
 
