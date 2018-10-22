@@ -198,8 +198,8 @@ int main(int argc, char *argv[])
   if(!ok || !done)
     return EXIT_FAILURE;
 
-  for(entry_end = entry_pos - 1, // save new ending location (minus the "Launch" entry)
-      entry_pos = entry_data; // return to start
+  entry_end = entry_pos - 1; // save new ending location (minus the "Launch" entry)
+  for(entry_pos = entry_data; // return to start
       entry_pos <= entry_end; // exit when you reach the end
       entry_pos += 2) // move toward the end
   {
