@@ -109,6 +109,18 @@ int main(int argc, char *argv[])
   char* limit_stack   = nullptr;
   char* limit_as      = nullptr;
 
+#if defined(__linux__)
+  char* limit_rss         = nullptr;
+  char* limit_nproc       = nullptr;
+  char* limit_memlock     = nullptr;
+  char* limit_locks       = nullptr;
+  char* limit_sigpending  = nullptr;
+  char* limit_msgqueue    = nullptr;
+  char* limit_nice        = nullptr;
+  char* limit_rtprio      = nullptr;
+  char* limit_rttime      = nullptr;
+#endif
+
   entry_t entry_data[0x0020000] = { { 0, 0, nullptr } }; // 128K possible entries
   entry_t* entry_pos = entry_data;
   entry_t* entry_end = entry_data + arraylength(entry_data);
@@ -249,8 +261,7 @@ int main(int argc, char *argv[])
         egroup = value->data;
         break;
 
-// LimitRSS=, LimitNPROC=, LimitMEMLOCK=, LimitLOCKS=, LimitSIGPENDING=, LimitMSGQUEUE=, LimitNICE=, LimitRTPRIO=, LimitRTTIME=
-
+// POSIX
       case "/Limits/CoreDumpSize"_hash: // LimitCORE
         limit_core = value->data;
         break;
@@ -273,18 +284,45 @@ int main(int argc, char *argv[])
         limit_as = value->data;
         break;
 
-      default:
+#if defined(__linux__) // Linux
+      case "/Linux/Limits/RSS"_hash: // LimitRSS
+        limit_rss = value->data;
+        break;
+      case "/Linux/Limits/NPROC"_hash: // LimitNPROC
+        limit_nproc = value->data;
+        break;
+      case "/Linux/Limits/MEMLOCK"_hash: // LimitMEMLOCK
+        limit_memlock = value->data;
+        break;
+      case "/Linux/Limits/LOCKS"_hash: // LimitLOCKS
+        limit_locks = value->data;
+        break;
+      case "/Linux/Limits/SIGPENDING"_hash: // LimitSIGPENDING
+        limit_sigpending = value->data;
+        break;
+      case "/Linux/Limits/MSGQUEUE"_hash: // LimitMSGQUEUE
+        limit_msgqueue = value->data;
+        break;
+      case "/Linux/Limits/NICE"_hash: // LimitNICE
+        limit_nice = value->data;
+        break;
+      case "/Linux/Limits/RTPRIO"_hash: // LimitRTPRIO
+        limit_rtprio = value->data;
+        break;
+      case "/Linux/Limits/RTTIME"_hash: // LimitRTTIME
+        limit_rttime = value->data;
+        break;
+#endif
+
+      default: // for indeterminate keys
         if(starts_with(key, "/Environment/"))
         {
           if(::setenv(key->data + sizeof("/Environment/") - 1, value->data, 1))
             return EXIT_FAILURE;
         }
-
-
       break;
     }
   }
-
 
 
 // <limits>
@@ -324,7 +362,54 @@ int main(int argc, char *argv[])
      (std::atoi(limit_as) || limit_as[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_AS, &(lim = { 0, rlim_t(std::atoi(limit_as)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
- // </limits>
+
+#if defined(__linux__)
+  if(limit_rss != nullptr && // value is set
+     (std::atoi(limit_rss) || limit_rss[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_RSS, &(lim = { 0, rlim_t(std::atoi(limit_rss)) })) == posix::error_response) // ensure limit was set
+    return EXIT_FAILURE;
+
+  if(limit_nproc != nullptr && // value is set
+     (std::atoi(limit_nproc) || limit_nproc[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_NPROC, &(lim = { 0, rlim_t(std::atoi(limit_nproc)) })) == posix::error_response) // ensure limit was set
+    return EXIT_FAILURE;
+
+  if(limit_memlock != nullptr && // value is set
+     (std::atoi(limit_memlock) || limit_memlock[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_MEMLOCK, &(lim = { 0, rlim_t(std::atoi(limit_memlock)) })) == posix::error_response) // ensure limit was set
+    return EXIT_FAILURE;
+
+  if(limit_locks != nullptr && // value is set
+     (std::atoi(limit_locks) || limit_locks[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_LOCKS, &(lim = { 0, rlim_t(std::atoi(limit_locks)) })) == posix::error_response) // ensure limit was set
+    return EXIT_FAILURE;
+
+  if(limit_sigpending != nullptr && // value is set
+     (std::atoi(limit_sigpending) || limit_sigpending[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_SIGPENDING, &(lim = { 0, rlim_t(std::atoi(limit_sigpending)) })) == posix::error_response) // ensure limit was set
+    return EXIT_FAILURE;
+
+  if(limit_msgqueue != nullptr && // value is set
+     (std::atoi(limit_msgqueue) || limit_msgqueue[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_MSGQUEUE, &(lim = { 0, rlim_t(std::atoi(limit_msgqueue)) })) == posix::error_response) // ensure limit was set
+    return EXIT_FAILURE;
+
+  if(limit_nice != nullptr && // value is set
+     (std::atoi(limit_nice) || limit_nice[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_NICE, &(lim = { 0, rlim_t(std::atoi(limit_nice)) })) == posix::error_response) // ensure limit was set
+    return EXIT_FAILURE;
+
+  if(limit_rtprio != nullptr && // value is set
+     (std::atoi(limit_rtprio) || limit_rtprio[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_RTPRIO, &(lim = { 0, rlim_t(std::atoi(limit_rtprio)) })) == posix::error_response) // ensure limit was set
+    return EXIT_FAILURE;
+
+  if(limit_rttime != nullptr && // value is set
+     (std::atoi(limit_rttime) || limit_rttime[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_RTTIME, &(lim = { 0, rlim_t(std::atoi(limit_rttime)) })) == posix::error_response) // ensure limit was set
+    return EXIT_FAILURE;
+#endif
+// </limits>
 
   if(priority != nullptr &&
      ::setpriority(PRIO_PROCESS, id_t(getpid()), std::atoi(priority)) == posix::error_response) // set priority
@@ -364,8 +449,3 @@ int main(int argc, char *argv[])
 
   return ::execv(executable, const_cast<char* const*>(arguments));
 }
-
-#ifdef DEBUGABLE_TEST
-#undef STDIN_FILENO
-#define STDIN_FILENO  0
-#endif
