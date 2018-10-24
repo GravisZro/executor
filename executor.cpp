@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
       if(iscmd) // if even numbered string then it's a key
       {
         if(entry_pos->bytewidth == 1 && // key is a narrow character string AND
-           entry_pos->count == 7 && // it's six characters long AND
+           entry_pos->count == 7 && // it's seven characters long AND
            !std::strcmp(entry_pos->data, "Execute")) // is "Execute"
           done = true; // we are done!
         else
