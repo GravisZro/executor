@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
     '/', 'b', 'i', 'n', '/', 's', 'h', ' ', '-', 'c', ' ', '\"', 'e', 'c', 'h', 'o', ' ', 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd', '\"',
 
     1, 0,
-    sizeof("Launch") - 1, 0,
+    sizeof("Execute") - 1, 0,
     'L', 'a', 'u', 'n', 'c', 'h',
   };
   ::write(iopipe[1], input_data, sizeof(input_data));
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
       if(iscmd) // if even numbered string then it's a key
       {
         if(entry_pos->bytewidth == 1 && // key is a narrow character string AND
-           entry_pos->count == 6 && // it's six characters long AND
+           entry_pos->count == 7 && // it's six characters long AND
            !std::strcmp(entry_pos->data, "Execute")) // is "Execute"
           done = true; // we are done!
         else
