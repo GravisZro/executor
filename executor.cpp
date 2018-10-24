@@ -1,8 +1,3 @@
-// PDTK
-#include <cxxutils/posix_helpers.h>
-#include <cxxutils/misc_helpers.h>
-#include <cxxutils/hashing.h>
-
 // POSIX++
 #include <cstdint>
 #include <cstring>
@@ -11,12 +6,15 @@
 #include <cctype>
 
 // POSIX
-#include <errno.h>
 #include <unistd.h>
 #include <poll.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
 
+// PDTK
+#include <cxxutils/posix_helpers.h>
+#include <cxxutils/misc_helpers.h>
+#include <cxxutils/hashing.h>
 
 typedef uint32_t malterminator; // ensure malformed multibyte strings are terminated
 
@@ -26,14 +24,30 @@ struct entry_t
   uint16_t count;
   char* data;
 
-  constexpr posix::size_t   size(void) const { return bytewidth * count; }
-  constexpr posix::ssize_t ssize(void) const { return bytewidth * count; }
+  entry_t(void) noexcept
+    : bytewidth(0),
+      count(0),
+      data(NULL) { }
+
+  ~entry_t(void) noexcept
+  {
+    if(data != NULL)
+      ::free(data);
+    data = NULL;
+  }
+
+  bool reserve(void) noexcept
+  {
+    data = static_cast<char*>(::malloc(size()));
+    return data != NULL;
+  }
+
+  constexpr posix::size_t   size(void) const noexcept { return bytewidth * count; }
+  constexpr posix::ssize_t ssize(void) const noexcept { return bytewidth * count; }
 };
 
-static bool starts_with(entry_t* entry, const char* str)
-{
-  return std::memcmp(entry->data, str, strlen(str)) == 0;
-}
+static bool starts_with(entry_t* entry, const char* const str)
+  { return std::memcmp(entry->data, str, std::strlen(str)) == 0; }
 
 
 static void strtoargs(entry_t* entry, char** array, size_t arr_length)
@@ -121,13 +135,9 @@ int main(int argc, char *argv[])
   char* limit_rttime      = nullptr;
 #endif
 
-  entry_t entry_data[0x0020000] = { { 0, 0, nullptr } }; // 128K possible entries
+  entry_t entry_data[1024]; // 512 possible entry pairs
   entry_t* entry_pos = entry_data;
   entry_t* entry_end = entry_data + arraylength(entry_data);
-
-  char string_data[0x00400000] = { 0 }; // 4MiB string data buffer
-  char* string_pos = string_data;
-  char* string_end = string_data + arraylength(string_data);
 
 #ifdef DEBUGABLE_TEST
 #undef STDIN_FILENO
@@ -161,54 +171,42 @@ int main(int argc, char *argv[])
   pollfd pset = { STDIN_FILENO, POLLIN, 0 };
   bool ok = true;
   bool done = false;
-  bool iskey = true;
+  bool iscmd = true;
 
   while(ok && !done)
   {
+    ok = entry_pos < entry_end; // ensure we're still within the data buffer
     if(ok)
-      ok &= ::poll(&pset, 1, 1000) > 0;
+      ok = posix::poll(&pset, 1, 1000); // have new entry to read
     if(ok)
-      ok &= ::read(STDIN_FILENO, &entry_pos->bytewidth, sizeof(uint16_t)) == sizeof(uint16_t); // reading entry type bytewidth worked
+      ok = posix::read(STDIN_FILENO, &entry_pos->bytewidth, sizeof(uint16_t)) == sizeof(uint16_t); // reading entry type bytewidth worked
     if(ok)
-      ok &= ::read(STDIN_FILENO, &entry_pos->count, sizeof(uint16_t)) == sizeof(uint16_t); // reading entry type count worked
+      ok = posix::read(STDIN_FILENO, &entry_pos->count    , sizeof(uint16_t)) == sizeof(uint16_t); // reading entry type count worked
     if(ok)
-    {
-      entry_pos->data = string_pos;
-      ok &= ::read(STDIN_FILENO, string_pos, entry_pos->size()) == entry_pos->ssize();
-    }
+      ok = entry_pos->reserve();
+    if(ok)
+      ok = posix::read(STDIN_FILENO, entry_pos->data, entry_pos->size()) == entry_pos->ssize();
 
     if(ok)
     {
-      if(iskey) // if even numbered string then it's a key
+      if(iscmd) // if even numbered string then it's a key
       {
         if(entry_pos->bytewidth == 1 && // key is a narrow character string AND
            entry_pos->count == 6 && // it's six characters long AND
-           string_pos[0] == 'L' && // is "Launch"
-           string_pos[1] == 'a' &&
-           string_pos[2] == 'u' &&
-           string_pos[3] == 'n' &&
-           string_pos[4] == 'c' &&
-           string_pos[5] == 'h')
+           !std::strcmp(entry_pos->data, "Execute")) // is "Execute"
           done = true; // we are done!
         else
           ok &= entry_pos->bytewidth == 1 && // key is a narrow character string
-                string_pos[0] == '/'; // key must begin with an absolute path
+                entry_pos->data[0] == '/'; // key must begin with an absolute path
       }
-      iskey ^= true;
+      iscmd ^= true;
     }
 
     if(ok)
-    {
-      string_pos += entry_pos->size() + sizeof(malterminator); // add four \0 (null terminator) chars to eliminate malformed multibyte strings from overflowing
       ++entry_pos; // move to next entry
-
-      ok &= string_pos < string_end && // ensure we're still within the data buffer
-            entry_pos < entry_end;
-    }
+    else
+      return EXIT_FAILURE;
   }
-
-  if(!ok || !done)
-    return EXIT_FAILURE;
 
   entry_end = entry_pos - 1; // save new ending location (minus the "Launch" entry)
   for(entry_pos = entry_data; // return to start
