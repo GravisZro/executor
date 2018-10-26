@@ -7,12 +7,12 @@
 
 // POSIX
 #include <unistd.h>
-#include <poll.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
 
 // PDTK
 #include <cxxutils/posix_helpers.h>
+#include <cxxutils/socket_helpers.h>
 #include <cxxutils/misc_helpers.h>
 #include <cxxutils/hashing.h>
 
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
   {
     ok = entry_pos < entry_end; // ensure we're still within the data buffer
     if(ok)
-      ok = posix::poll(&pset, 1, 1000); // have new entry to read
+      ok = posix::poll(&pset, 1, 1000) != posix::error_response; // have new entry to read
     if(ok)
       ok = posix::read(STDIN_FILENO, &entry_pos->bytewidth, sizeof(uint16_t)) == sizeof(uint16_t); // reading entry type bytewidth worked
     if(ok)
