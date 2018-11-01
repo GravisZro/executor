@@ -29,15 +29,15 @@ QMAKE_LFLAGS += -L/usr/lib/x86_64-linux-musl -dynamic-linker /lib/ld-musl-x86_64
 LIBS += -lc++
 }
 
-PDTK = ../pdtk
-INCLUDEPATH += $$PDTK
+PUT = ../put
+INCLUDEPATH += $$PUT
 
 SOURCES = executor.cpp 
 
 HEADERS +=  \
-    $$PDTK/cxxutils/posix_helpers.h \
-    $$PDTK/cxxutils/misc_helpers.h \
-    $$PDTK/cxxutils/socket_helpers.h \
-    $$PDTK/cxxutils/error_helpers.h \
-    $$PDTK/cxxutils/hashing.h \
-    $$PDTK/specialized/capabilities.h
+    $$PUT/cxxutils/posix_helpers.h \
+    $$PUT/cxxutils/misc_helpers.h \
+    $$PUT/cxxutils/socket_helpers.h \
+    $$PUT/cxxutils/error_helpers.h \
+    $$PUT/cxxutils/hashing.h \
+    $$PUT/specialized/capabilities.h
