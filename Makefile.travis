@@ -26,8 +26,8 @@ ifndef BUILD_PATH
   BUILD_PATH=$(SOURCE_PATH)/bin
 endif
 
-PDTK          = ./pdtk
-INCPATH       = -I. -I$(PDTK)
+PUT           = ./put
+INCPATH       = -I. -I$(PUT)
 CFLAGS        = -pipe -g -Wall -W -fPIC $(DEFINES) $(INCPATH)
 CXXFLAGS      = -pipe -std=c++14 -Os -fno-exceptions -fno-rtti -fno-threadsafe-statics -g -Wall -W -fPIC $(DEFINES) $(INCPATH)
 LDFLAGS       = 
@@ -54,7 +54,7 @@ $(TARGET): OUTPUT_DIR $(OBJS)
 	$(QUIET) $(CXX) -o $@ $(OBJS) $(LDFLAGS)
 
 OUTPUT_DIR:
-	$(QUIET) mkdir -p $(BUILD_PATH)/$(PDTK)/cxxutils
+	$(QUIET) mkdir -p $(BUILD_PATH)/$(PUT)/cxxutils
 
 clean:
 	$(QUIET) rm -f $(TARGET)
