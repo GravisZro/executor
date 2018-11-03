@@ -1,20 +1,36 @@
 TEMPLATE = app
 CONFIG -= qt
 CONFIG += c++14
+CONFIG += strict_c++
+CONFIG += exceptions_off
+CONFIG += rtti_off
 
 # FOR CLANG
 #QMAKE_CXXFLAGS += -stdlib=libc++
 #QMAKE_LFLAGS += -stdlib=libc++
+QMAKE_CXXFLAGS += -fconstexpr-depth=256
+QMAKE_CXXFLAGS += -fconstexpr-steps=900000000
 
 # universal arguments
-QMAKE_CXXFLAGS += -std=c++14
-QMAKE_CXXFLAGS += -fconstexpr-depth=256
-#QMAKE_CXXFLAGS += -fconstexpr-steps=900000000
-QMAKE_CXXFLAGS += -pipe -Os -fno-exceptions -fno-rtti -fno-threadsafe-statics
-#QMAKE_CXXFLAGS += -pipe -Os
-#QMAKE_CXXFLAGS += -fno-exceptions
-#QMAKE_CXXFLAGS += -fno-rtti
-#QMAKE_CXXFLAGS += -fno-threadsafe-statics
+QMAKE_CXXFLAGS += -fno-rtti
+
+QMAKE_CXXFLAGS_DEBUG += -O0 -g3
+QMAKE_CXXFLAGS_RELEASE += -Os
+
+
+#QMAKE_CXXFLAGS_RELEASE += -fno-threadsafe-statics
+QMAKE_CXXFLAGS_RELEASE += -fno-asynchronous-unwind-tables
+#QMAKE_CXXFLAGS_RELEASE += -fstack-protector-all
+QMAKE_CXXFLAGS_RELEASE += -fstack-protector-strong
+
+# optimizations
+QMAKE_CXXFLAGS_RELEASE += -fdata-sections
+QMAKE_CXXFLAGS_RELEASE += -ffunction-sections
+QMAKE_LFLAGS_RELEASE += -Wl,--gc-sections
+
+# libraries
+LIBS += -lrt
+
 #DEFINES += INTERRUPTED_WRAPPER
 
 #LIBS += -lpthread
@@ -34,7 +50,7 @@ INCLUDEPATH += $$PUT
 
 SOURCES = executor.cpp 
 
-HEADERS +=  \
+HEADERS += \
     $$PUT/cxxutils/posix_helpers.h \
     $$PUT/cxxutils/misc_helpers.h \
     $$PUT/cxxutils/socket_helpers.h \
