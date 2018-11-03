@@ -42,8 +42,8 @@ struct entry_t
     return data != NULL;
   }
 
-  constexpr posix::size_t   size(void) const noexcept { return bytewidth * count; }
-  constexpr posix::ssize_t ssize(void) const noexcept { return bytewidth * count; }
+  posix::size_t   size(void) const noexcept { return bytewidth * count; }
+  posix::ssize_t ssize(void) const noexcept { return bytewidth * count; }
 };
 
 static bool starts_with(entry_t* entry, const char* const str)
