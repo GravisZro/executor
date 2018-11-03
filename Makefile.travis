@@ -10,8 +10,8 @@ ifndef CXX
   CXX:=g++
 endif
 
-ifndef CPPSTANDARD
-  CPPSTANDARD:=-std=c++14
+ifndef CXXSTANDARD
+  CXXSTANDARD:=-std=c++14
 endif
 
 ifndef CSTANDARD
