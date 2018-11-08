@@ -77,4 +77,4 @@ matrix:
 git:
   submodules: true
 script:
-  - make -e CXX=$COMPILER -e DEFINES=__CONTINUOUS_INTEGRATION__ -e VERBOSE=true -f Makefile.travis
+  - make -e CXX=$COMPILER -e DEFINES=-D__CONTINUOUS_INTEGRATION__ -e VERBOSE=true -f Makefile.travis
