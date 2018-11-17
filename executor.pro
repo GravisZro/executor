@@ -31,7 +31,7 @@ QMAKE_LFLAGS_RELEASE += -Wl,--gc-sections
 # libraries
 LIBS += -lrt
 
-#DEFINES += INTERRUPTED_WRAPPER
+#DEFINES += DISABLE_INTERRUPTED_WRAPPER
 
 #LIBS += -lpthread
 experimental {
