@@ -1,13 +1,4 @@
-// POSIX++
-#include <cstdint>
-#include <cstring>
-#include <cstdlib>
-#include <cstdio>
-#include <cctype>
-
 // POSIX
-#include <unistd.h>
-#include <sys/stat.h>
 #include <sys/resource.h>
 
 // PDTK
@@ -32,13 +23,13 @@ struct entry_t
   ~entry_t(void) noexcept
   {
     if(data != NULL)
-      ::free(data);
+      posix::free(data);
     data = NULL;
   }
 
   bool reserve(void) noexcept
   {
-    data = static_cast<char*>(::malloc(size()));
+    data = static_cast<char*>(posix::malloc(size()));
     return data != NULL;
   }
 
@@ -47,7 +38,7 @@ struct entry_t
 };
 
 static bool starts_with(entry_t* entry, const char* const str)
-  { return std::memcmp(entry->data, str, std::strlen(str)) == 0; }
+  { return posix::memcmp(entry->data, str, posix::strlen(str)) == 0; }
 
 
 static void strtoargs(entry_t* entry, char** array, size_t arr_length)
@@ -59,7 +50,7 @@ static void strtoargs(entry_t* entry, char** array, size_t arr_length)
   bool quote_open = false;
   for(size_t pos = 0; pos < entry->count && arg_pos != arg_end; ++pos)
   {
-    if(::isspace(entry->data[pos]))
+    if(posix::isspace(entry->data[pos]))
     {
       if(!quote_open)
       {
@@ -145,10 +136,10 @@ int main(int argc, char *argv[])
 
   int iopipe[2] = { 0 };
 
-  if(pipe(iopipe) == -1)
+  if(!posix::pipe(iopipe))
   {
-    std::printf("error: %s\n", strerror(errno));
-    std::fflush(stdout);
+    posix::printf("error: %s\n", posix::strerror(errno));
+    posix::fflush(stdout);
     return EXIT_FAILURE;
   }
   char input_data[] =
@@ -165,7 +156,7 @@ int main(int argc, char *argv[])
     sizeof("Execute") - 1, 0,
     'L', 'a', 'u', 'n', 'c', 'h',
   };
-  ::write(iopipe[1], input_data, sizeof(input_data));
+  posix::write(iopipe[1], input_data, sizeof(input_data));
 #endif
 
   pollfd pset = { STDIN_FILENO, POLLIN, 0 };
@@ -193,7 +184,7 @@ int main(int argc, char *argv[])
       {
         if(entry_pos->bytewidth == 1 && // key is a narrow character string AND
            entry_pos->count == 7 && // it's seven characters long AND
-           !std::strcmp(entry_pos->data, "Execute")) // is "Execute"
+           !posix::strcmp(entry_pos->data, "Execute")) // is "Execute"
           done = true; // we are done!
         else
           ok &= entry_pos->bytewidth == 1 && // key is a narrow character string
@@ -228,14 +219,14 @@ int main(int argc, char *argv[])
 
       case "/Process/Arguments"_hash:
       {
-        std::printf("converting : %s\n", value->data);
+        posix::printf("converting : %s\n", value->data);
         strtoargs(value, arguments, arraylength(arguments));
         for(char** pos = arguments; *pos; ++pos)
         {
-          std::printf("arg : \"%s\"\n", *pos);
+          posix::printf("arg : \"%s\"\n", *pos);
         }
-        std::printf("done\n");
-        std::fflush(stdout);
+        posix::printf("done\n");
+        posix::fflush(stdout);
       }
       break;
 
@@ -327,114 +318,114 @@ int main(int argc, char *argv[])
   struct rlimit lim;
 
   if(limit_core != nullptr && // value is set
-     (std::atoi(limit_core) || limit_core[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_CORE, &(lim = { 0, rlim_t(std::atoi(limit_core)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_core) || limit_core[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_CORE, &(lim = { 0, rlim_t(posix::atoi(limit_core)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_cpu != nullptr && // value is set
-     (std::atoi(limit_cpu) || limit_cpu[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_CPU, &(lim = { 0, rlim_t(std::atoi(limit_cpu)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_cpu) || limit_cpu[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_CPU, &(lim = { 0, rlim_t(posix::atoi(limit_cpu)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_data != nullptr && // value is set
-     (std::atoi(limit_data) || limit_data[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_DATA, &(lim = { 0, rlim_t(std::atoi(limit_data)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_data) || limit_data[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_DATA, &(lim = { 0, rlim_t(posix::atoi(limit_data)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_fsize != nullptr && // value is set
-     (std::atoi(limit_fsize) || limit_fsize[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_FSIZE, &(lim = { 0, rlim_t(std::atoi(limit_fsize)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_fsize) || limit_fsize[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_FSIZE, &(lim = { 0, rlim_t(posix::atoi(limit_fsize)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_nofile != nullptr && // value is set
-     (std::atoi(limit_nofile) || limit_nofile[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_NOFILE, &(lim = { 0, rlim_t(std::atoi(limit_nofile)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_nofile) || limit_nofile[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_NOFILE, &(lim = { 0, rlim_t(posix::atoi(limit_nofile)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_stack != nullptr && // value is set
-     (std::atoi(limit_stack) || limit_stack[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_STACK, &(lim = { 0, rlim_t(std::atoi(limit_stack)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_stack) || limit_stack[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_STACK, &(lim = { 0, rlim_t(posix::atoi(limit_stack)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_as != nullptr && // value is set
-     (std::atoi(limit_as) || limit_as[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_AS, &(lim = { 0, rlim_t(std::atoi(limit_as)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_as) || limit_as[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_AS, &(lim = { 0, rlim_t(posix::atoi(limit_as)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
 #if defined(__linux__)
   if(limit_rss != nullptr && // value is set
-     (std::atoi(limit_rss) || limit_rss[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_RSS, &(lim = { 0, rlim_t(std::atoi(limit_rss)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_rss) || limit_rss[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_RSS, &(lim = { 0, rlim_t(posix::atoi(limit_rss)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_nproc != nullptr && // value is set
-     (std::atoi(limit_nproc) || limit_nproc[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_NPROC, &(lim = { 0, rlim_t(std::atoi(limit_nproc)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_nproc) || limit_nproc[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_NPROC, &(lim = { 0, rlim_t(posix::atoi(limit_nproc)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_memlock != nullptr && // value is set
-     (std::atoi(limit_memlock) || limit_memlock[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_MEMLOCK, &(lim = { 0, rlim_t(std::atoi(limit_memlock)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_memlock) || limit_memlock[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_MEMLOCK, &(lim = { 0, rlim_t(posix::atoi(limit_memlock)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_locks != nullptr && // value is set
-     (std::atoi(limit_locks) || limit_locks[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_LOCKS, &(lim = { 0, rlim_t(std::atoi(limit_locks)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_locks) || limit_locks[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_LOCKS, &(lim = { 0, rlim_t(posix::atoi(limit_locks)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_sigpending != nullptr && // value is set
-     (std::atoi(limit_sigpending) || limit_sigpending[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_SIGPENDING, &(lim = { 0, rlim_t(std::atoi(limit_sigpending)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_sigpending) || limit_sigpending[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_SIGPENDING, &(lim = { 0, rlim_t(posix::atoi(limit_sigpending)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_msgqueue != nullptr && // value is set
-     (std::atoi(limit_msgqueue) || limit_msgqueue[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_MSGQUEUE, &(lim = { 0, rlim_t(std::atoi(limit_msgqueue)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_msgqueue) || limit_msgqueue[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_MSGQUEUE, &(lim = { 0, rlim_t(posix::atoi(limit_msgqueue)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_nice != nullptr && // value is set
-     (std::atoi(limit_nice) || limit_nice[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_NICE, &(lim = { 0, rlim_t(std::atoi(limit_nice)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_nice) || limit_nice[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_NICE, &(lim = { 0, rlim_t(posix::atoi(limit_nice)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_rtprio != nullptr && // value is set
-     (std::atoi(limit_rtprio) || limit_rtprio[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_RTPRIO, &(lim = { 0, rlim_t(std::atoi(limit_rtprio)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_rtprio) || limit_rtprio[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_RTPRIO, &(lim = { 0, rlim_t(posix::atoi(limit_rtprio)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 
   if(limit_rttime != nullptr && // value is set
-     (std::atoi(limit_rttime) || limit_rttime[0] == '0') && // check if value is numeric
-     ::setrlimit(RLIMIT_RTTIME, &(lim = { 0, rlim_t(std::atoi(limit_rttime)) })) == posix::error_response) // ensure limit was set
+     (posix::atoi(limit_rttime) || limit_rttime[0] == '0') && // check if value is numeric
+     ::setrlimit(RLIMIT_RTTIME, &(lim = { 0, rlim_t(posix::atoi(limit_rttime)) })) == posix::error_response) // ensure limit was set
     return EXIT_FAILURE;
 #endif
 // </limits>
 
   if(priority != nullptr &&
-     ::setpriority(PRIO_PROCESS, id_t(getpid()), std::atoi(priority)) == posix::error_response) // set priority
+     ::setpriority(PRIO_PROCESS, id_t(getpid()), posix::atoi(priority)) == posix::error_response) // set priority
     return EXIT_FAILURE;
 
   if(workingdir != nullptr &&
-     ::chdir(workingdir) == posix::error_response) // set working director
+     posix::chdir(workingdir) == posix::error_response) // set working director
      return EXIT_FAILURE;
 
   if(user != nullptr &&
-     (posix::getuserid(user) == gid_t(posix::error_response) ||
-      ::setuid(posix::getuserid(user)) == posix::error_response)) // set UID
+     (posix::getuserid(user) == uid_t(posix::error_response) ||
+      posix::setuid(posix::getuserid(user)) == posix::error_response)) // set UID
     return EXIT_FAILURE;
 
   if(group != nullptr &&
-     (posix::getgroupid(group) == uid_t(posix::error_response) ||
-      ::setgid(posix::getgroupid(group)) == posix::error_response)) // set GID
+     (posix::getgroupid(group) == gid_t(posix::error_response) ||
+      !posix::setgid(posix::getgroupid(group)))) // set GID
     return EXIT_FAILURE;
 
   if(euser != nullptr &&
-     (posix::getuserid(euser) == gid_t(posix::error_response) ||
-      ::seteuid(posix::getuserid(euser)) == posix::error_response)) // set Effective UID
+     (posix::getuserid(euser) == uid_t(posix::error_response) ||
+      !posix::seteuid(posix::getuserid(euser)))) // set Effective UID
     return EXIT_FAILURE;
 
   if(egroup != nullptr &&
-     (posix::getgroupid(egroup) == uid_t(posix::error_response) ||
-      ::setegid(posix::getgroupid(egroup)) == posix::error_response)) // set Effective GID
+     (posix::getgroupid(egroup) == gid_t(posix::error_response) ||
+      !posix::setegid(posix::getgroupid(egroup)))) // set Effective GID
     return EXIT_FAILURE;
 
 
