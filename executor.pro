@@ -11,19 +11,15 @@ CONFIG += rtti_off
 QMAKE_CXXFLAGS += -fconstexpr-depth=256
 #QMAKE_CXXFLAGS += -fconstexpr-steps=900000000
 
-# universal arguments
-QMAKE_CXXFLAGS += -fno-rtti
-
+# debug flags
 QMAKE_CXXFLAGS_DEBUG += -O0 -g3
+
+# release flags
 QMAKE_CXXFLAGS_RELEASE += -Os
-
-
-#QMAKE_CXXFLAGS_RELEASE += -fno-threadsafe-statics
+QMAKE_CXXFLAGS_RELEASE += -fno-threadsafe-statics
 QMAKE_CXXFLAGS_RELEASE += -fno-asynchronous-unwind-tables
 #QMAKE_CXXFLAGS_RELEASE += -fstack-protector-all
 QMAKE_CXXFLAGS_RELEASE += -fstack-protector-strong
-
-# optimizations
 QMAKE_CXXFLAGS_RELEASE += -fdata-sections
 QMAKE_CXXFLAGS_RELEASE += -ffunction-sections
 QMAKE_LFLAGS_RELEASE += -Wl,--gc-sections

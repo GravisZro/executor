@@ -96,7 +96,7 @@ static void strtoargs(entry_t* entry, char** array, size_t arr_length)
 
 //#define DEBUGABLE_TEST
 
-int main(int argc, char *argv[])
+int main(int argc, char * /*argv*/ [])
 {
   char* arguments[0x100] = { nullptr };
   char* executable    = nullptr;
@@ -410,7 +410,7 @@ int main(int argc, char *argv[])
 
   if(user != nullptr &&
      (posix::getuserid(user) == uid_t(posix::error_response) ||
-      posix::setuid(posix::getuserid(user)) == posix::error_response)) // set UID
+      !posix::setuid(posix::getuserid(user)))) // set UID
     return EXIT_FAILURE;
 
   if(group != nullptr &&
