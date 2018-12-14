@@ -18,6 +18,10 @@ ifndef CSTANDARD
   CSTANDARD:=-std=c11
 endif
 
+ifndef POSIX_VERSION
+  POSIX_VERSION=700
+endif
+
 ifndef SOURCE_PATH
   SOURCE_PATH=.
 endif
@@ -28,7 +32,7 @@ endif
 
 PUT           = ./put
 INCPATH       = -I$(PUT)
-CFLAGS        = -pipe -g -Os -Wall -W -fPIC $(DEFINES) $(INCPATH)
+CFLAGS        = -pipe -g -Os -Wall -W -fPIC -D_XOPEN_SOURCE=$(POSIX_VERSION) $(DEFINES) $(INCPATH)
 CXXFLAGS      = $(CFLAGS) -fno-exceptions -fno-rtti
 LDFLAGS       = 
 
