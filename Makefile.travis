@@ -35,11 +35,12 @@ ifneq ($(shell getconf _XOPEN_VERSION 1>/dev/null 2>&1; echo $$?),0)
   $(shell for funcname in $(TESTLIST); do echo $(TESTFILE) | sed -e "s/\\\\n/\\n/g" > $(TESTFILEPATH) && ${CXX} ${CXXSTANDARD} ${TESTFILEPATH} 1>/dev/null 2>&1 && echo "#HAVE_$${funcname}" | tr '[:lower:]' '[:upper:]' | sed -e "s/HAVE/define HAVE/" >> $(OUTPUTFILE) ; done)
 endif
 
-PUT           = ./put
-INCPATH       = -I$(PUT)
-CFLAGS        = -pipe -g -Os -Wall -W -fPIC $(DEFINES) $(INCPATH)
+PUT           = put
+STATICLIB     = libput.a
+INCLUDE_PATH  = -I$(SOURCE_PATH)
+CFLAGS        = -pipe -g -Os -Wall -W -fPIC -flto $(DEFINES) $(INCLUDE_PATH)
 CXXFLAGS      = $(CFLAGS) -fno-exceptions -fno-rtti
-LDFLAGS       = 
+LDFLAGS       = $(BUILD_PATH)/$(STATICLIB)
 
 TARGET        = executor
 SOURCES       = executor.cpp
@@ -62,8 +63,15 @@ $(TARGET): OUTPUT_DIR $(OBJS)
 	@echo [ Linking ]: $@
 	$(QUIET) $(CXX) -o $@ $(OBJS) $(LDFLAGS)
 
+$(BUILD_PATH)/$(STATICLIB): $(PUT)
+	@echo [Compiling]: $@
+	$(QUIET) make -f $(PUT)/Makefile.travis $(BUILD_PATH)/$(STATICLIB) -e \
+		SOURCE_PATH=$(PUT) BUILD_PATH=$(BUILD_PATH) \
+		VERBOSE=$(VERBOSE) CC=$(CC) CXX=$(CXX) \
+		CSTANDARD=$(CSTANDARD) CXXSTANDARD=$(CXXSTANDARD)
+
 OUTPUT_DIR:
-	$(QUIET) mkdir -p $(BUILD_PATH)/$(PUT)/cxxutils
+	$(QUIET) mkdir -p $(BUILD_PATH)
 
 clean:
 	$(QUIET) rm -f $(TARGET)

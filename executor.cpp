@@ -1,11 +1,11 @@
 // POSIX
 #include <sys/resource.h>
 
-// PDTK
-#include <cxxutils/posix_helpers.h>
-#include <cxxutils/socket_helpers.h>
-#include <cxxutils/misc_helpers.h>
-#include <cxxutils/hashing.h>
+// PUT
+#include <put/cxxutils/posix_helpers.h>
+#include <put/cxxutils/socket_helpers.h>
+#include <put/cxxutils/misc_helpers.h>
+#include <put/cxxutils/hashing.h>
 
 typedef uint32_t malterminator; // ensure malformed multibyte strings are terminated
 
