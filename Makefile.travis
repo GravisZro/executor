@@ -36,11 +36,11 @@ ifneq ($(shell getconf _XOPEN_VERSION 1>/dev/null 2>&1; echo $$?),0)
 endif
 
 PUT           = put
-STATICLIB     = libput.a
+STATICLIB     = $(BUILD_PATH)/libput.a
 INCLUDE_PATH  = -I$(SOURCE_PATH)
 CFLAGS        = -pipe -g -Os -Wall -W -fPIC -flto $(DEFINES) $(INCLUDE_PATH)
 CXXFLAGS      = $(CFLAGS) -fno-exceptions -fno-rtti
-LDFLAGS       = $(BUILD_PATH)/$(STATICLIB)
+LDFLAGS       = $(STATICLIB)
 
 TARGET        = executor
 SOURCES       = executor.cpp
@@ -59,13 +59,13 @@ $(BUILD_PATH)/%.o: $(SOURCE_PATH)/%.c
 	@echo [Compiling]: $<
 	$(QUIET) $(CC) -c -o $@ $< $(CSTANDARD) $(CFLAGS)
 
-$(TARGET): OUTPUT_DIR $(OBJS)
+$(TARGET): OUTPUT_DIR $(OBJS) $(STATICLIB)
 	@echo [ Linking ]: $@
 	$(QUIET) $(CXX) -o $@ $(OBJS) $(LDFLAGS)
 
-$(BUILD_PATH)/$(STATICLIB): $(PUT)
+$(STATICLIB): $(PUT)
 	@echo [Compiling]: $@
-	$(QUIET) make -f $(PUT)/Makefile.travis $(BUILD_PATH)/$(STATICLIB) -e \
+	$(QUIET) make -f $(PUT)/Makefile.travis $(STATICLIB) -e \
 		SOURCE_PATH=$(PUT) BUILD_PATH=$(BUILD_PATH) \
 		VERBOSE=$(VERBOSE) CC=$(CC) CXX=$(CXX) \
 		CSTANDARD=$(CSTANDARD) CXXSTANDARD=$(CXXSTANDARD)
