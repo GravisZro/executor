@@ -54,15 +54,15 @@ SOURCES := $(foreach f,$(SOURCES),$(SOURCE_PATH)/$(f))
 
 $(BUILD_PATH)/%.o: $(SOURCE_PATH)/%.cpp OUTPUT_DIR
 	@echo [Compiling]: $<
-	$(QUIET) $(CXX) -c -o $@ $< $(CXXSTANDARD) $(INC_CXXFLAGS)
+	$(QUIET) $(CXX) -c -o $@ $< $(CXXSTANDARD) $(INT_CXXFLAGS)
 
 $(BUILD_PATH)/%.o: $(SOURCE_PATH)/%.c OUTPUT_DIR
 	@echo [Compiling]: $<
-	$(QUIET) $(CC) -c -o $@ $< $(CSTANDARD) $(INC_CFLAGS)
+	$(QUIET) $(CC) -c -o $@ $< $(CSTANDARD) $(INT_CFLAGS)
 
 $(TARGET): $(OBJS) $(STATICLIB)
 	@echo [ Linking ]: $@
-	$(QUIET) $(CXX) -o $@ $(OBJS) $(INC_LDFLAGS)
+	$(QUIET) $(CXX) -o $@ $(OBJS) $(INT_LDFLAGS)
 
 $(STATICLIB): $(PUT)
 	@echo [Compiling]: $@
