@@ -11,7 +11,6 @@ matrix:
           packages: ['g++-4.9']
       env:
         - COMPILER=g++-4.9
-        - LTO_FLAG=-flto
 
     - os: linux
       dist: trusty
@@ -22,7 +21,6 @@ matrix:
           packages: ['g++-5']
       env:
         - COMPILER=g++-5
-        - LTO_FLAG=-flto
 
     - os: linux
       dist: trusty
@@ -33,7 +31,6 @@ matrix:
           packages: ['g++-6']
       env:
         - COMPILER=g++-6
-        - LTO_FLAG=-flto
 
     - os: linux
       dist: trusty
@@ -44,7 +41,6 @@ matrix:
           packages: ['g++-7']
       env:
         - COMPILER=g++-7
-        - LTO_FLAG=-flto
 
     - os: linux
       dist: trusty
@@ -55,7 +51,6 @@ matrix:
           packages: ['clang-3.9', 'libstdc++-4.9-dev']
       env:
         - COMPILER=clang++-3.9
-        - LTO_FLAG=
 
     - os: linux
       dist: trusty
@@ -66,23 +61,20 @@ matrix:
           packages: ['clang-4.0', 'libstdc++-4.9-dev']
       env:
         - COMPILER=clang++-4.0
-        - LTO_FLAG=
 
     - os: osx
       osx_image: xcode8.3
       compiler: clang
       env:
         - COMPILER=clang++
-        - LTO_FLAG=-flto
 
     - os: osx
       osx_image: xcode9
       compiler: clang
       env:
         - COMPILER=clang++
-        - LTO_FLAG=-flto
 
 git:
   submodules: true
 script:
-  - make -f Makefile.travis CXX=$COMPILER LTO_FLAG=$LTO_FLAG DEFINES=-D__CONTINUOUS_INTEGRATION__ VERBOSE=true
+  - make -f Makefile.travis CXX=$COMPILER DEFINES=-D__CONTINUOUS_INTEGRATION__ VERBOSE=true
