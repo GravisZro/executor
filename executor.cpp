@@ -7,6 +7,12 @@
 #include <put/cxxutils/misc_helpers.h>
 #include <put/cxxutils/hashing.h>
 
+#define PARSE_ERROR_RETURN(x)     (01 + x)
+#define POSIX_LIMIT_RETURN(x)     (10 + x)
+#define POSIX_PRIORITY_RETURN(x)  (20 + x)
+#define POSIX_ID_RETURN(x)        (30 + x)
+#define LINUX_LIMIT_RETURN(x)     (40 + x)
+
 typedef uint32_t malterminator; // ensure malformed multibyte strings are terminated
 
 struct entry_t
@@ -196,7 +202,7 @@ int main(int argc, char * /*argv*/ [])
     if(ok)
       ++entry_pos; // move to next entry
     else
-      return EXIT_FAILURE;
+      return PARSE_ERROR_RETURN(0);
   }
 
   entry_end = entry_pos - 1; // save new ending location (minus the "Launch" entry)
@@ -307,12 +313,11 @@ int main(int argc, char * /*argv*/ [])
         if(starts_with(key, "/Environment/"))
         {
           if(::setenv(key->data + sizeof("/Environment/") - 1, value->data, 1))
-            return EXIT_FAILURE;
+            return PARSE_ERROR_RETURN(1);
         }
       break;
     }
   }
-
 
 // <limits>
   struct rlimit lim;
@@ -320,121 +325,120 @@ int main(int argc, char * /*argv*/ [])
   if(limit_core != nullptr && // value is set
      (posix::atoi(limit_core) || limit_core[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_CORE, &(lim = { 0, rlim_t(posix::atoi(limit_core)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return POSIX_LIMIT_RETURN(0);
 
   if(limit_cpu != nullptr && // value is set
      (posix::atoi(limit_cpu) || limit_cpu[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_CPU, &(lim = { 0, rlim_t(posix::atoi(limit_cpu)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return POSIX_LIMIT_RETURN(1);
 
   if(limit_data != nullptr && // value is set
      (posix::atoi(limit_data) || limit_data[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_DATA, &(lim = { 0, rlim_t(posix::atoi(limit_data)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return POSIX_LIMIT_RETURN(2);
 
   if(limit_fsize != nullptr && // value is set
      (posix::atoi(limit_fsize) || limit_fsize[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_FSIZE, &(lim = { 0, rlim_t(posix::atoi(limit_fsize)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return POSIX_LIMIT_RETURN(3);
 
   if(limit_nofile != nullptr && // value is set
      (posix::atoi(limit_nofile) || limit_nofile[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_NOFILE, &(lim = { 0, rlim_t(posix::atoi(limit_nofile)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return POSIX_LIMIT_RETURN(4);
 
   if(limit_stack != nullptr && // value is set
      (posix::atoi(limit_stack) || limit_stack[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_STACK, &(lim = { 0, rlim_t(posix::atoi(limit_stack)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return POSIX_LIMIT_RETURN(5);
 
   if(limit_as != nullptr && // value is set
      (posix::atoi(limit_as) || limit_as[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_AS, &(lim = { 0, rlim_t(posix::atoi(limit_as)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return POSIX_LIMIT_RETURN(6);
 
 #if defined(__linux__)
   if(limit_rss != nullptr && // value is set
      (posix::atoi(limit_rss) || limit_rss[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_RSS, &(lim = { 0, rlim_t(posix::atoi(limit_rss)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return LINUX_LIMIT_RETURN(0);
 
   if(limit_nproc != nullptr && // value is set
      (posix::atoi(limit_nproc) || limit_nproc[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_NPROC, &(lim = { 0, rlim_t(posix::atoi(limit_nproc)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return LINUX_LIMIT_RETURN(1);
 
   if(limit_memlock != nullptr && // value is set
      (posix::atoi(limit_memlock) || limit_memlock[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_MEMLOCK, &(lim = { 0, rlim_t(posix::atoi(limit_memlock)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return LINUX_LIMIT_RETURN(2);
 
   if(limit_locks != nullptr && // value is set
      (posix::atoi(limit_locks) || limit_locks[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_LOCKS, &(lim = { 0, rlim_t(posix::atoi(limit_locks)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return LINUX_LIMIT_RETURN(3);
 
   if(limit_sigpending != nullptr && // value is set
      (posix::atoi(limit_sigpending) || limit_sigpending[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_SIGPENDING, &(lim = { 0, rlim_t(posix::atoi(limit_sigpending)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return LINUX_LIMIT_RETURN(4);
 
   if(limit_msgqueue != nullptr && // value is set
      (posix::atoi(limit_msgqueue) || limit_msgqueue[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_MSGQUEUE, &(lim = { 0, rlim_t(posix::atoi(limit_msgqueue)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return LINUX_LIMIT_RETURN(5);
 
   if(limit_nice != nullptr && // value is set
      (posix::atoi(limit_nice) || limit_nice[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_NICE, &(lim = { 0, rlim_t(posix::atoi(limit_nice)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return LINUX_LIMIT_RETURN(6);
 
   if(limit_rtprio != nullptr && // value is set
      (posix::atoi(limit_rtprio) || limit_rtprio[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_RTPRIO, &(lim = { 0, rlim_t(posix::atoi(limit_rtprio)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return LINUX_LIMIT_RETURN(7);
 
   if(limit_rttime != nullptr && // value is set
      (posix::atoi(limit_rttime) || limit_rttime[0] == '0') && // check if value is numeric
      ::setrlimit(RLIMIT_RTTIME, &(lim = { 0, rlim_t(posix::atoi(limit_rttime)) })) == posix::error_response) // ensure limit was set
-    return EXIT_FAILURE;
+    return LINUX_LIMIT_RETURN(8);
 #endif
 // </limits>
 
   if(priority != nullptr &&
      ::setpriority(PRIO_PROCESS, id_t(getpid()), posix::atoi(priority)) == posix::error_response) // set priority
-    return EXIT_FAILURE;
+    return POSIX_PRIORITY_RETURN(0);
 
   if(workingdir != nullptr &&
      posix::chdir(workingdir) == posix::error_response) // set working director
-     return EXIT_FAILURE;
+     return POSIX_PRIORITY_RETURN(1);
 
-  if(user != nullptr &&
-     (posix::getuserid(user) == uid_t(posix::error_response) ||
-      !posix::setuid(posix::getuserid(user)))) // set UID
-    return EXIT_FAILURE;
-
-  if(group != nullptr &&
-     (posix::getgroupid(group) == gid_t(posix::error_response) ||
-      !posix::setgid(posix::getgroupid(group)))) // set GID
-    return EXIT_FAILURE;
-
-  if(euser != nullptr &&
-     (posix::getuserid(euser) == uid_t(posix::error_response) ||
-      !posix::seteuid(posix::getuserid(euser)))) // set Effective UID
-    return EXIT_FAILURE;
 
   if(egroup != nullptr &&
      (posix::getgroupid(egroup) == gid_t(posix::error_response) ||
       !posix::setegid(posix::getgroupid(egroup)))) // set Effective GID
-    return EXIT_FAILURE;
+    return POSIX_ID_RETURN(0);
 
+  if(euser != nullptr &&
+     (posix::getuserid(euser) == uid_t(posix::error_response) ||
+      !posix::seteuid(posix::getuserid(euser)))) // set Effective UID
+    return POSIX_ID_RETURN(1);
+
+  if(group != nullptr &&
+     (posix::getgroupid(group) == gid_t(posix::error_response) ||
+      !posix::setgid(posix::getgroupid(group)))) // set GID
+    return POSIX_ID_RETURN(2);
+
+  if(user != nullptr &&
+     (posix::getuserid(user) == uid_t(posix::error_response) ||
+      !posix::setuid(posix::getuserid(user)))) // set UID
+    return POSIX_ID_RETURN(3);
 
   if(arguments[0] == nullptr)
-    return EXIT_FAILURE;
+    return PARSE_ERROR_RETURN(2);
 
   if(executable == nullptr) // assume the first argument is the executable name
     executable = arguments[0];
-
 
   return ::execv(executable, const_cast<char* const*>(arguments));
 }
