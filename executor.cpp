@@ -6,6 +6,7 @@
 #include <put/cxxutils/socket_helpers.h>
 #include <put/cxxutils/misc_helpers.h>
 #include <put/cxxutils/hashing.h>
+#include <put/cxxutils/vterm.h>
 
 #define PARSE_ERROR_RETURN(x)     (01 + x)
 #define POSIX_LIMIT_RETURN(x)     (10 + x)
@@ -35,7 +36,8 @@ struct entry_t
 
   bool reserve(void) noexcept
   {
-    data = static_cast<char*>(posix::malloc(size()));
+    data = static_cast<char*>(posix::malloc(size() + 1)); // add one for string terminator
+    data[size()] = '\0'; // add string terminator
     return data != NULL;
   }
 
@@ -224,17 +226,8 @@ int main(int argc, char * /*argv*/ [])
       break;
 
       case "/Process/Arguments"_hash:
-      {
-        posix::printf("converting : %s\n", value->data);
         strtoargs(value, arguments, arraylength(arguments));
-        for(char** pos = arguments; *pos; ++pos)
-        {
-          posix::printf("arg : \"%s\"\n", *pos);
-        }
-        posix::printf("done\n");
-        posix::fflush(stdout);
-      }
-      break;
+        break;
 
       case "/Process/Priority"_hash:
         priority = value->data;
@@ -406,7 +399,7 @@ int main(int argc, char * /*argv*/ [])
 // </limits>
 
   if(priority != nullptr &&
-     ::setpriority(PRIO_PROCESS, id_t(getpid()), posix::atoi(priority)) == posix::error_response) // set priority
+     ::setpriority(PRIO_PROCESS, id_t(posix::getpid()), posix::atoi(priority)) == posix::error_response) // set priority
     return POSIX_PRIORITY_RETURN(0);
 
   if(workingdir != nullptr &&
@@ -439,6 +432,11 @@ int main(int argc, char * /*argv*/ [])
 
   if(executable == nullptr) // assume the first argument is the executable name
     executable = arguments[0];
-
-  return ::execv(executable, const_cast<char* const*>(arguments));
+/*
+  terminal::write("executable : \"%s\"\n", executable);
+  for(char** pos = arguments; *pos; ++pos)
+    terminal::write("arg : \"%s\"\n", *pos);
+  terminal::write("done\n");
+*/
+  return posix::execv(executable, const_cast<char* const*>(arguments));
 }
