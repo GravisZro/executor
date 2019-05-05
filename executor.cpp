@@ -104,9 +104,9 @@ static void strtoargs(entry_t* entry, char** array, size_t arr_length)
 
 //#define DEBUGABLE_TEST
 
-int main(int argc, char * /*argv*/ [])
+int main(int /*argc*/ , char * /*argv*/ [])
 {
-  char* arguments[0x100] = { nullptr };
+  char* arguments[0x100] = { NULL };
   char* executable    = nullptr;
   char* workingdir    = nullptr;
   char* priority      = nullptr;
@@ -427,16 +427,22 @@ int main(int argc, char * /*argv*/ [])
       !posix::setuid(posix::getuserid(user)))) // set UID
     return POSIX_ID_RETURN(3);
 
-  if(arguments[0] == nullptr)
+  if(arguments[0] == NULL)
     return PARSE_ERROR_RETURN(2);
 
   if(executable == nullptr) // assume the first argument is the executable name
     executable = arguments[0];
 /*
   terminal::write("executable : \"%s\"\n", executable);
-  for(char** pos = arguments; *pos; ++pos)
+  for(char** pos = arguments; *pos != NULL; ++pos)
     terminal::write("arg : \"%s\"\n", *pos);
   terminal::write("done\n");
 */
-  return posix::execv(executable, const_cast<char* const*>(arguments));
+  if(executable == NULL) // shoudn't be possible
+    return PARSE_ERROR_RETURN(3);
+
+  if(executable[0] == '/') // if includes path
+    return posix::execv(executable, arguments);
+
+  return posix::execvp(executable, arguments); // just the filename
 }
